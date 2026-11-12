@@ -1,0 +1,55 @@
+cloudera_manager:
+  url: https://cm-host.example.com:7183      # CM API base (no /api/...)
+  api_version: v54                           # check: curl -u user:pw $url/api/version
+  username: readonly_monitor                 # use a CM *read-only* role (Read-Only / Auditor)
+  password_env: CM_PASSWORD                  # read from env var, never hardcode
+  verify_tls: /etc/pki/tls/certs/ca-bundle.crt   # path to CA, or true; avoid false
+  timeout_s: 30
+
+checks:
+  host_heartbeat_max_age_s: 180
+  lookback_hours: 6                # window for timeseries pulls
+  baseline_days: 14                # history used for statistical baselines
+  zscore_threshold: 4.0            # robust (MAD) z-score
+  events_lookback_hours: 24
+  # Hard thresholds (deterministic rules)
+  thresholds:
+    hdfs_used_pct:      {warn: 75, crit: 85}
+    host_cpu_pct:       {warn: 85, crit: 95}
+    host_mem_used_pct:  {warn: 90, crit: 96}
+    host_swap_gb:       {warn: 1,  crit: 4}
+    days_to_full_hdfs:  {warn: 60, crit: 21}   # lower is worse
+  # tsquery metrics: name -> query. VERIFY names in CM > Charts > Chart Builder.
+  metrics:
+    hdfs_used_pct:     "SELECT dfs_capacity_used / dfs_capacity * 100 WHERE serviceName = hdfs"
+    host_cpu_pct:      "SELECT cpu_percent_across_hosts WHERE category = HOST"
+    host_mem_used_pct: "SELECT physical_memory_used / physical_memory_total * 100 WHERE category = HOST"
+    host_swap_gb:      "SELECT swap_used / 1073741824 WHERE category = HOST"
+    yarn_apps_pending: "SELECT apps_pending_across_yarn_pools WHERE serviceName = yarn"
+
+state_db: ./state/baseline.sqlite
+
+llm:
+  enabled: true
+  provider: openai_compat          # openai_compat (on-prem vLLM/Ollama/etc.) | anthropic
+  # on-prem, data never leaves network:
+  base_url: http://llm.internal:8000/v1
+  model: llama-3.1-70b-instruct
+  api_key_env: LLM_API_KEY
+  # anthropic alternative:
+  #   provider: anthropic
+  #   model: claude-sonnet-5-5
+  #   api_key_env: ANTHROPIC_API_KEY
+  redact_hostnames: true           # replace FQDNs/IPs with stable tokens before sending
+  max_findings_in_prompt: 60
+
+notify:
+  slack_webhook_env: SLACK_WEBHOOK_URL   # optional
+  email:                                  # optional
+    smtp_host: smtp.example.com
+    smtp_port: 25
+    from: cloudera-health@example.com
+    to: [bigdata-oncall@example.com]
+  min_severity: WARNING
+
+report_dir: ./reports

@@ -1,0 +1,9 @@
+[Unit]
+Description=Cloudera AI health check
+[Service]
+Type=oneshot
+User=cdp-monitor
+WorkingDirectory=/opt/cdp-health
+EnvironmentFile=/etc/cdp-health.env   # CM_PASSWORD=..., LLM_API_KEY=..., chmod 600
+ExecStart=/opt/cdp-health/.venv/bin/python -m cdp_health --config /opt/cdp-health/config.yaml
+SuccessExitStatus=0 1 2
