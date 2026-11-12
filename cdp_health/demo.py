@@ -39,3 +39,12 @@ class DemoCM:
         if "cpu" in q:
             return [{"entity": "dn07", "metric": "m", "points": pts(lambda i: 35 + 8 * math.sin(i / 9) + (55 if i > n - 6 else 0))}]
         return [{"entity": "dn07", "metric": "m", "points": pts(lambda i: 40 + rnd.random() * 5)}]
+
+
+DEMO_LOG = [
+    "2026-11-12 10:00:01,100 WARN  org.apache.hadoop.hdfs.server.datanode.DataNode: Slow BlockReceiver write 812ms blk_1073741825_1001",
+    "2026-11-12 10:00:02,100 ERROR org.apache.hadoop.ipc.Server: IPC Server handler 5 on 8020 failed from 10.1.2.3:51234",
+    "2026-11-12 10:00:03,100 WARN  org.apache.hadoop.hdfs.server.datanode.DataNode: Slow BlockReceiver write 903ms blk_1073741999_1002",
+    "2026-11-12 11:30:00,000 FATAL org.apache.hadoop.hdfs.server.datanode.DataNode: Volume /data/5 failed: java.io.IOException: Checksum error on blk_1073749999_5555",
+    "2026-11-12 11:31:00,000 ERROR org.apache.hadoop.hdfs.server.namenode.FSNamesystem: Unexpected rollover of edit log segment 4421",
+]

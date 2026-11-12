@@ -33,8 +33,8 @@ llm:
   enabled: true
   provider: openai_compat          # openai_compat (on-prem vLLM/Ollama/etc.) | anthropic
   # on-prem, data never leaves network:
-  base_url: http://llm.internal:8000/v1
-  model: llama-3.1-70b-instruct
+  base_url: http://llm.internal:8000/v1      # vLLM; Ollama: http://localhost:11434/v1
+  model: meta-llama/Llama-3.3-70B-Instruct   # Ollama: llama3.1:8b
   api_key_env: LLM_API_KEY
   # anthropic alternative:
   #   provider: anthropic
@@ -42,6 +42,21 @@ llm:
   #   api_key_env: ANTHROPIC_API_KEY
   redact_hostnames: true           # replace FQDNs/IPs with stable tokens before sending
   max_findings_in_prompt: 60
+
+# Open-source BERT-family models (optional; pip install sentence-transformers transformers torch)
+ml:
+  embedding_model: /opt/models/bge-small-en-v1.5        # or BAAI/bge-small-en-v1.5, all-MiniLM-L6-v2
+  classifier_model: /opt/models/deberta-v3-base-zeroshot-v2.0   # zero-shot severity labels; omit to disable
+
+logs:
+  enabled: true
+  paths: [/var/log/hadoop-hdfs/*.log.out, /var/log/hive/*.log, /var/log/hadoop-yarn/*.log.out]
+  tail_lines: 20000
+  novelty_similarity: 0.85        # >= this cosine to a known pattern = variant, not novel
+
+rag:
+  runbook_dir: ./runbooks         # your SOPs (markdown); retrieved and given to Llama as context
+  top_k: 3
 
 notify:
   slack_webhook_env: SLACK_WEBHOOK_URL   # optional

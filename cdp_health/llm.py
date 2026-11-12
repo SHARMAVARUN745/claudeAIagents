@@ -30,9 +30,11 @@ class Redactor:
         return text
 
 
-def summarize(findings, cfg) -> str:
+def summarize(findings, cfg, context=None) -> str:
     items = [f.to_dict() for f in findings][: cfg.get("max_findings_in_prompt", 60)]
     payload = json.dumps(items, indent=1, default=str)
+    if context:
+        payload += "\n\nRELEVANT INTERNAL RUNBOOK EXCERPTS (prefer these procedures):\n" + "\n---\n".join(context)
     red = Redactor() if cfg.get("redact_hostnames") else None
     if red:
         payload = red(payload)

@@ -63,6 +63,37 @@ inventing data, state-changing steps must be flagged `REQUIRES CHANGE APPROVAL`,
 **Do not give the LLM write access to the cluster** until you have run read-only for weeks; if you later add
 remediation (restart role, etc.), put it behind a human approval step.
 
+### 4a. Open-source models: Llama, BERT and friends
+Generative (Llama etc.) and encoder (BERT) models do different jobs. Use both:
+
+| Job | Model | Why | Where in code |
+|---|---|---|---|
+| Triage narrative, root-cause grouping, next steps | **Llama 3.x Instruct** (8B light / 70B best), also Qwen2.5, Mistral | Generates text; BERT cannot | `llm.py` via any OpenAI-compatible server |
+| Log anomaly: "is this error pattern new/similar?" | **BERT-family embedder**: `bge-small-en-v1.5`, `all-MiniLM-L6-v2` | Fast on CPU, semantic similarity | `logs.py`, `ml.Embedder` |
+| Severity/category of a new log line | **Zero-shot NLI**: `deberta-v3-base-zeroshot-v2.0` (or `bart-large-mnli`) | No labelled data needed | `ml.ZeroShot` |
+| Runbook retrieval (RAG) for Llama | same embedder | Grounds answers in your SOPs | `rag.py` |
+| Optional later: fine-tuned classifier | DistilBERT/RoBERTa on your labelled incidents | Beats zero-shot once you have ~1-2k labels | add alongside `ZeroShot` |
+
+**Serve Llama on-prem** (pick one):
+```bash
+# Ollama: simplest, small/medium setups (8B fits a 16 GB GPU or runs slowly on CPU)
+ollama pull llama3.1:8b && ollama serve            # base_url: http://host:11434/v1, model: llama3.1:8b
+# vLLM: production throughput (70B needs ~2x80GB GPUs, or use a 4-bit AWQ build on 1-2 GPUs)
+vllm serve meta-llama/Llama-3.3-70B-Instruct --tensor-parallel-size 2 --port 8000
+```
+Check the Llama licence terms for your use. **Air-gapped hosts:** download models on a connected machine
+(`huggingface-cli download BAAI/bge-small-en-v1.5 --local-dir ...`), copy them in, point `ml.*_model` at the
+local directory, and set `HF_HUB_OFFLINE=1`. Install `pip install sentence-transformers transformers torch`
+(CPU build is enough for the BERT models).
+
+**How the log detector works:** ERROR/WARN/FATAL lines are masked into templates (IPs, block IDs, paths, numbers
+removed). The first run only learns the baseline. Later, a template never seen before is flagged unless its BERT
+embedding is >= 0.85 similar to a known one (a variant). Deterministic keywords (OOM, no space left, checksum
+error, safe mode...) are always CRITICAL, and zero-shot can upgrade or downgrade the rest. Without the ML
+libraries it falls back to exact template novelty.
+
+Expect a smaller Llama (8B) to follow the "don't invent" rule less reliably than 70B; keep the raw findings table authoritative.
+
 ## 5. Tool inventory
 | Need | Tool |
 |---|---|
